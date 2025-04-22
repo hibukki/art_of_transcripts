@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Transcripts
+transcripts.md
+transcripts_cache.sqlite

@@ -1,7 +1,7 @@
 import feedparser
 import requests_cache
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 import re
 import traceback
 
@@ -11,8 +11,6 @@ def fetch_transcripts(rss_url: str, cache_name: str = "transcripts_cache", expir
     requests_cache.install_cache(cache_name, expire_after=expire)
 
     feed = feedparser.parse(rss_url)
-    transcripts: dict[str, str] = {}
-
     for entry in feed.entries:
         print(f"Processing {entry.title}")
         try:
@@ -23,11 +21,14 @@ def fetch_transcripts(rss_url: str, cache_name: str = "transcripts_cache", expir
             )
             soup = BeautifulSoup(html, "html.parser")
             a = soup.find("a", href=True)
-            if not a:
+            href_val = None
+            if isinstance(a, Tag):
+                href_val = a.attrs.get("href")
+            if not isinstance(href_val, str):
                 continue
 
             # follow the tinyurl to get the final google‑doc URL
-            resp = requests.get(a["href"])
+            resp = requests.get(href_val)
             doc_url = resp.url
 
             m = re.search(r"/d/([^/]+)/", doc_url)
@@ -37,20 +38,25 @@ def fetch_transcripts(rss_url: str, cache_name: str = "transcripts_cache", expir
             export_url = f"https://docs.google.com/document/d/{m.group(1)}/export?format=txt"
             text = requests.get(export_url).text
 
-            transcripts[entry.title] = text
+            yield entry.title, text
 
         except Exception:
             traceback.print_exc()
 
-    return transcripts
-
 
 def main():
     rss_url = "https://feeds.simplecast.com/zksImfUP"
-    for title, text in fetch_transcripts(rss_url).items():
-        print(f"=== {title} ===\n")
-        print(text)
-        print("\n")
+    # write transcripts as markdown, streaming as each is fetched
+    with open("transcripts.md", "w", encoding="utf-8") as f:
+        for title, text in fetch_transcripts(rss_url):
+            print(f"=== {title} ===\n")
+            print(text)
+            print("\n")
+
+            header = f"## {title}\n\n"
+            f.write(header)
+            f.write(text + "\n\n")
+            f.flush()
 
 
 if __name__ == "__main__":

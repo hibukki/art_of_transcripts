@@ -12,7 +12,7 @@ def fetch_transcripts(rss_url: str, cache_name: str = "transcripts_cache", expir
 
     feed = feedparser.parse(rss_url)
     for entry in feed.entries:
-        print(f"Processing {entry.title}")
+        print(f"  Processing {entry.title}")
         try:
             html = (
                 entry.content[0].value
@@ -46,18 +46,18 @@ def fetch_transcripts(rss_url: str, cache_name: str = "transcripts_cache", expir
 
 def main():
     rss_url = "https://feeds.simplecast.com/zksImfUP"
-    # write transcripts as markdown, streaming as each is fetched
-    with open("transcripts.md", "w", encoding="utf-8") as f:
-        for title, text in fetch_transcripts(rss_url):
-            print(f"=== {title} ===\n")
-            print(text)
-            print("\n")
+    output_file = "transcripts.md"
 
+    print(f"Gradually writing transcripts to {output_file}")
+
+    # write transcripts as markdown, streaming as each is fetched
+    with open(output_file, "w", encoding="utf-8") as f:
+        for title, text in fetch_transcripts(rss_url):
             header = f"## {title}\n\n"
             f.write(header)
             f.write(text + "\n\n")
             f.flush()
 
-
+    print(f"Done writing transcripts to {output_file}")
 if __name__ == "__main__":
     main()
